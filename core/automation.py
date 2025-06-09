@@ -17,7 +17,8 @@ class AutomationTools:
         "ChatGPT": "https://chat.openai.com",
         "Google Drive": "https://drive.google.com",
         "Gmail": "https://mail.google.com",
-        "GitHub": "https://github.com"
+        "GitHub": "https://github.com",
+        "Instagram": "https://instagram.com"
     }
     
     def __init__(self, parent_frame):
