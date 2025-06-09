@@ -5,27 +5,29 @@ import json
 from ui.main_window import MainWindow
 from core.utils import setup_data_files
 
+
 class ProjectWizardApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Project Wizard PRO MAX")
         self.root.geometry("900x600")
         self.root.minsize(800, 500)
-        
+
         # Configuração inicial
         setup_data_files()
-        
+
         # Carrega configurações
         self.config = self.load_config()
-        
+
         # Aplica tema
         self.apply_theme(self.config.get('theme', 'light'))
-        
+
         # Cria a interface principal
         self.main_window = MainWindow(self.root, self.config)
-        
+
         # Configura o fechamento da janela
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
     def load_config(self):
         """Carrega as configurações do arquivo config.json"""
         try:
@@ -39,10 +41,12 @@ class ProjectWizardApp:
                 'recent_projects': [],
                 'pomodoro_duration': 25
             }
+
     def save_config(self):
         """Salva as configurações no arquivo config.json"""
         with open('data/config.json', 'w') as f:
             json.dump(self.config, f, indent=4)
+
     def apply_theme(self, theme):
         """Aplica o tema selecionado"""
         if theme == 'dark':
@@ -59,13 +63,16 @@ class ProjectWizardApp:
                 activeBackground='#e0e0e0',
                 activeForeground='#000000'
             )
+
     def on_close(self):
         """Lida com o fechamento da aplicação"""
         self.save_config()
         self.root.destroy()
+
     def run(self):
         """Executa a aplicação"""
         self.root.mainloop()
+
 
 if __name__ == "__main__":
     app = ProjectWizardApp()
