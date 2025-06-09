@@ -1,0 +1,21 @@
+projectwizard/
+├── app.py
+├── core/
+│   ├── __init__.py
+│   ├── project_creator.py
+│   ├── excel_generator.py
+│   ├── automation.py
+│   ├── pomodoro.py
+│   └── utils.py
+├── ui/
+│   ├── __init__.py
+│   ├── main_window.py
+│   ├── tabs.py
+│   └── config.py
+├── assets/
+│   ├── icons/
+│   └── templates/
+├── data/
+│   ├── config.json
+│   └── historico.json
+└── requirements.txt
