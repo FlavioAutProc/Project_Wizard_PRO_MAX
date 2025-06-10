@@ -3,6 +3,9 @@ import json
 import shutil
 from datetime import datetime
 import zipfile
+import pandas as pd
+from docx import Document
+from docx.shared import Pt
 
 
 def setup_data_files():
@@ -27,8 +30,14 @@ def setup_data_files():
         with open('data/historico.json', 'w', encoding='utf-8') as f:
             json.dump([], f, ensure_ascii=False)
 
+    # Cria notes.json se não existir
+    if not os.path.exists('data/notes.json'):
+        with open('data/notes.json', 'w', encoding='utf-8') as f:
+            json.dump([], f, ensure_ascii=False)
 
-def create_project_structure(project_name, project_type, base_dir, create_readme=True, create_main_py=True):
+
+def create_project_structure(project_name, project_type, base_dir, custom_dirs=None,
+                             create_readme=True, create_main_py=True, services=None):
     """
     Cria a estrutura de diretórios para um novo projeto
     Retorna o caminho completo do projeto criado
@@ -44,17 +53,19 @@ def create_project_structure(project_name, project_type, base_dir, create_readme
         project_name = f"{project_name}_{counter}"
 
     # Cria os diretórios principais
-    dirs = ['dados', 'documentos', 'relatorios', 'planilhas', 'scripts', 'outputs']
+    dirs = custom_dirs if custom_dirs else ['dados', 'documentos', 'relatorios', 'planilhas', 'scripts', 'outputs']
     os.makedirs(project_path)
 
     for dir_name in dirs:
-        os.makedirs(os.path.join(project_path, dir_name))
+        os.makedirs(os.path.join(project_path, dir_name), exist_ok=True)
 
     # Cria arquivos iniciais
     if create_readme:
         create_readme(project_path, project_name, project_type)
     if create_main_py:
         create_main_py(project_path)
+    if services:
+        create_services_config(project_path, services)
 
     return project_path
 
@@ -104,6 +115,17 @@ if __name__ == "__main__":
 '''
     with open(os.path.join(project_path, 'scripts', 'main.py'), 'w', encoding='utf-8') as f:
         f.write(content)
+
+
+def create_services_config(project_path, services):
+    """Cria um arquivo de configuração para os serviços do projeto"""
+    config = {
+        "services": services,
+        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+
+    with open(os.path.join(project_path, 'project_services.json'), 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=4)
 
 
 def backup_project(project_path):
@@ -159,3 +181,100 @@ def get_recent_projects(limit=5):
             return history[-limit:][::-1]  # Retorna os mais recentes primeiro
     except (FileNotFoundError, json.JSONDecodeError):
         return []
+
+
+def add_note(title, content, tags=None, note_type="geral"):
+    """Adiciona uma nova anotação"""
+    try:
+        with open('data/notes.json', 'r+', encoding='utf-8') as f:
+            try:
+                notes = json.load(f)
+            except json.JSONDecodeError:
+                notes = []
+
+            notes.append({
+                'id': len(notes) + 1,
+                'title': title,
+                'content': content,
+                'tags': tags or [],
+                'type': note_type,
+                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+
+            f.seek(0)
+            json.dump(notes, f, indent=4, ensure_ascii=False)
+            f.truncate()
+    except Exception as e:
+        print(f"Erro ao adicionar anotação: {str(e)}")
+
+
+def get_notes(tag=None, note_type=None):
+    """Retorna as anotações, filtradas por tag e tipo se especificado"""
+    try:
+        with open('data/notes.json', 'r', encoding='utf-8') as f:
+            notes = json.load(f)
+
+            if tag:
+                notes = [note for note in notes if tag in note.get('tags', [])]
+
+            if note_type:
+                notes = [note for note in notes if note.get('type') == note_type]
+
+            return notes
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def export_notes_to_docx(notes, output_path):
+    """Exporta anotações para um arquivo DOCX"""
+    doc = Document()
+
+    # Configuração básica do documento
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Arial'
+    font.size = Pt(11)
+
+    # Adiciona título do documento
+    doc.add_heading('Anotações Exportadas', level=0)
+    doc.add_paragraph(f"Data de exportação: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    doc.add_paragraph("\n")
+
+    # Adiciona cada anotação
+    for note in notes:
+        doc.add_heading(note['title'], level=1)
+        doc.add_paragraph(f"Tipo: {note['type']}")
+        doc.add_paragraph(f"Tags: {', '.join(note.get('tags', []))}")
+        doc.add_paragraph(f"Criado em: {note['created_at']}")
+        doc.add_paragraph("\n")
+
+        # Adiciona o conteúdo da anotação
+        for paragraph in note['content'].split('\n'):
+            if paragraph.strip():
+                doc.add_paragraph(paragraph)
+
+        doc.add_paragraph("\n")
+        doc.add_paragraph("-" * 50)
+        doc.add_paragraph("\n")
+
+    # Salva o documento
+    doc.save(output_path)
+
+
+def clean_temp_files(directory):
+    """Limpa arquivos temporários e lixo do diretório especificado"""
+    temp_extensions = ['.tmp', '.temp', '.bak', '.~', '.log']
+    removed_files = []
+
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if any(file.lower().endswith(ext) for ext in temp_extensions):
+                try:
+                    file_path = os.path.join(root, file)
+                    os.remove(file_path)
+                    removed_files.append(file_path)
+                except Exception as e:
+                    print(f"Erro ao remover {file}: {str(e)}")
+
+    return removed_files
